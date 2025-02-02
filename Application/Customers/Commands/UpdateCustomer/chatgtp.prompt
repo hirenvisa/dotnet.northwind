@@ -1,0 +1,13 @@
+Task: Implement Update Customer Command with Validation
+
+Define UpdateCustomerCommand
+
+Create an UpdateCustomerCommand class that inherits from IRequest.
+Include all properties from the Customer class.
+Inside this class, define an inner handler class that inherits from IRequestHandler<UpdateCustomerCommand>.
+Inject INorthwindDbContext and IMapper into the handler's constructor.
+In the Handle method, retrieve the customer from the database, update its properties, and persist the changes.
+Define UpdateCustomerCommandValidator
+
+Create an UpdateCustomerCommandValidator class that inherits from AbstractValidator<UpdateCustomerCommand>.
+Add validation rules for all properties in the constructor.
