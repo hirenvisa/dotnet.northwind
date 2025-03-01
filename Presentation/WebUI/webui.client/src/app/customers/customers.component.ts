@@ -1,0 +1,20 @@
+import { Component } from '@angular/core';
+import { CustomersClient, CustomersListVm } from '../northwind-traders-api';
+
+@Component({
+  selector: 'app-customers',
+  templateUrl: './customers.component.html',
+  styleUrl: './customers.component.css'
+})
+export class CustomersComponent {
+
+  public vm: CustomersListVm = new CustomersListVm();
+
+  constructor(private client: CustomersClient) {
+    client.getAll().subscribe(result => {
+      this.vm = result;
+    }, error => console.error(error));;
+  }
+
+
+}
