@@ -11,9 +11,9 @@
 import { mergeMap as _observableMergeMap, catchError as _observableCatch } from 'rxjs/operators';
 import { Observable, throwError as _observableThrow, of as _observableOf } from 'rxjs';
 import { Injectable, Inject, Optional, InjectionToken } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpResponse, HttpResponseBase } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpResponse, HttpResponseBase, HttpContext } from '@angular/common/http';
 
-export const API_BASE_URL = new InjectionToken('API_BASE_URL');
+export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
 
 @Injectable()
 export class CustomersClient {
@@ -26,13 +26,14 @@ export class CustomersClient {
     this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "https://localhost:7006";
   }
 
-  getAll(): Observable<CustomersListVm> {    
+  getAll(httpContext?: HttpContext): Observable<CustomersListVm> {
     let url_ = this.baseUrl + "/Customers";
     url_ = url_.replace(/[?&]$/, "");
 
     let options_: any = {
       observe: "response",
       responseType: "blob",
+      context: httpContext,
       headers: new HttpHeaders({
         "Accept": "application/json"
       })
@@ -73,26 +74,18 @@ export class CustomersClient {
     }
     return _observableOf(null as any);
   }
-}
 
-@Injectable()
-export class WeatherForecastClient {
-  private http: HttpClient;
-  private baseUrl: string;
-  protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-  constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
-    this.http = http;
-    this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "https://localhost:7006";
-  }
-
-  get(): Observable<WeatherForecast[]> {
-    let url_ = this.baseUrl + "/WeatherForecast";
+  get(id: string, httpContext?: HttpContext): Observable<CustomerDetailVm> {
+    let url_ = this.baseUrl + "/Customers/{id}";
+    if (id === undefined || id === null)
+      throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace("{id}", encodeURIComponent("" + id));
     url_ = url_.replace(/[?&]$/, "");
 
     let options_: any = {
       observe: "response",
       responseType: "blob",
+      context: httpContext,
       headers: new HttpHeaders({
         "Accept": "application/json"
       })
@@ -105,14 +98,14 @@ export class WeatherForecastClient {
         try {
           return this.processGet(response_ as any);
         } catch (e) {
-          return _observableThrow(e) as any as Observable<WeatherForecast[]>;
+          return _observableThrow(e) as any as Observable<CustomerDetailVm>;
         }
       } else
-        return _observableThrow(response_) as any as Observable<WeatherForecast[]>;
+        return _observableThrow(response_) as any as Observable<CustomerDetailVm>;
     }));
   }
 
-  protected processGet(response: HttpResponseBase): Observable<WeatherForecast[]> {
+  protected processGet(response: HttpResponseBase): Observable<CustomerDetailVm> {
     const status = response.status;
     const responseBlob =
       response instanceof HttpResponse ? response.body :
@@ -123,15 +116,15 @@ export class WeatherForecastClient {
       return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
         let result200: any = null;
         let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-        if (Array.isArray(resultData200)) {
-          result200 = [] as any;
-          for (let item of resultData200)
-            result200!.push(WeatherForecast.fromJS(item));
-        }
-        else {
-          result200 = <any>null;
-        }
+        result200 = CustomerDetailVm.fromJS(resultData200);
         return _observableOf(result200);
+      }));
+    } else if (status === 404) {
+      return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+        let result404: any = null;
+        let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+        result404 = ProblemDetails.fromJS(resultData404);
+        return throwException("A server side error occurred.", status, _responseText, _headers, result404);
       }));
     } else if (status !== 200 && status !== 204) {
       return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
@@ -226,13 +219,22 @@ export interface ICustomerLookupDto {
   name?: string | undefined;
 }
 
-export class WeatherForecast implements IWeatherForecast {
-  date!: Date;
-  temperatureC!: number;
-  temperatureF!: number;
-  summary?: string | undefined;
+export class CustomerDetailVm implements ICustomerDetailVm {
+  [key: string]: any;
 
-  constructor(data?: IWeatherForecast) {
+  id?: string | undefined;
+  companyName?: string | undefined;
+  contactName?: string | undefined;
+  contactTitle?: string | undefined;
+  address?: string | undefined;
+  city?: string | undefined;
+  region?: string | undefined;
+  postalCode?: string | undefined;
+  country?: string | undefined;
+  phone?: string | undefined;
+  fax?: string | undefined;
+
+  constructor(data?: ICustomerDetailVm) {
     if (data) {
       for (var property in data) {
         if (data.hasOwnProperty(property))
@@ -243,41 +245,120 @@ export class WeatherForecast implements IWeatherForecast {
 
   init(_data?: any) {
     if (_data) {
-      this.date = _data["date"] ? new Date(_data["date"].toString()) : <any>undefined;
-      this.temperatureC = _data["temperatureC"];
-      this.temperatureF = _data["temperatureF"];
-      this.summary = _data["summary"];
+      this.id = _data["id"];
+      this.companyName = _data["companyName"];
+      this.contactName = _data["contactName"];
+      this.contactTitle = _data["contactTitle"];
+      this.address = _data["address"];
+      this.city = _data["city"];
+      this.region = _data["region"];
+      this.postalCode = _data["postalCode"];
+      this.country = _data["country"];
+      this.phone = _data["phone"];
+      this.fax = _data["fax"];
     }
   }
 
-  static fromJS(data: any): WeatherForecast {
+  static fromJS(data: any): CustomerDetailVm {
     data = typeof data === 'object' ? data : {};
-    let result = new WeatherForecast();
+    let result = new CustomerDetailVm();
     result.init(data);
     return result;
   }
 
   toJSON(data?: any) {
     data = typeof data === 'object' ? data : {};
-    data["date"] = this.date ? formatDate(this.date) : <any>undefined;
-    data["temperatureC"] = this.temperatureC;
-    data["temperatureF"] = this.temperatureF;
-    data["summary"] = this.summary;
+    data["id"] = this.id;
+    data["companyName"] = this.companyName;
+    data["contactName"] = this.contactName;
+    data["contactTitle"] = this.contactTitle;
+    data["address"] = this.address;
+    data["city"] = this.city;
+    data["region"] = this.region;
+    data["postalCode"] = this.postalCode;
+    data["country"] = this.country;
+    data["phone"] = this.phone;
+    data["fax"] = this.fax;
     return data;
   }
 }
 
-export interface IWeatherForecast {
-  date: Date;
-  temperatureC: number;
-  temperatureF: number;
-  summary?: string | undefined;
+export interface ICustomerDetailVm {
+  id?: string | undefined;
+  companyName?: string | undefined;
+  contactName?: string | undefined;
+  contactTitle?: string | undefined;
+  address?: string | undefined;
+  city?: string | undefined;
+  region?: string | undefined;
+  postalCode?: string | undefined;
+  country?: string | undefined;
+  phone?: string | undefined;
+  fax?: string | undefined;
 }
 
-function formatDate(d: Date) {
-  return d.getFullYear() + '-' +
-    (d.getMonth() < 9 ? ('0' + (d.getMonth() + 1)) : (d.getMonth() + 1)) + '-' +
-    (d.getDate() < 10 ? ('0' + d.getDate()) : d.getDate());
+export class ProblemDetails implements IProblemDetails {
+  type?: string | undefined;
+  title?: string | undefined;
+  status?: number | undefined;
+  detail?: string | undefined;
+  instance?: string | undefined;
+
+  [key: string]: any;
+
+  constructor(data?: IProblemDetails) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property))
+          (<any>this)[property] = (<any>data)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property))
+          this[property] = _data[property];
+      }
+      this.type = _data["type"];
+      this.title = _data["title"];
+      this.status = _data["status"];
+      this.detail = _data["detail"];
+      this.instance = _data["instance"];
+    }
+  }
+
+  static fromJS(data: any): ProblemDetails {
+    data = typeof data === 'object' ? data : {};
+    let result = new ProblemDetails();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property))
+        data[property] = this[property];
+    }
+    data["type"] = this.type;
+    data["title"] = this.title;
+    data["status"] = this.status;
+    data["detail"] = this.detail;
+    data["instance"] = this.instance;
+    return data;
+  }
+}
+
+export interface IProblemDetails {
+  type?: string | undefined;
+  title?: string | undefined;
+  status?: number | undefined;
+  detail?: string | undefined;
+  instance?: string | undefined;
+
+  [key: string]: any;
 }
 
 export class ApiException extends Error {

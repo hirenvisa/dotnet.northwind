@@ -58,6 +58,10 @@ app.UseAuthorization();
 app.UseOpenApi();
 
 app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+});
 
 app.MapControllers();
 app.UseRouting();
