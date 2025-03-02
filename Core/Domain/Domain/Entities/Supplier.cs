@@ -1,12 +1,12 @@
 ﻿namespace Northwind.Domain.Entities;
 
-public class Customer
-{
-    public Customer()
+public class Supplier
+{   public Supplier()
     {
-        Orders = new HashSet<Order>();
+        Products = new HashSet<Product>();
     }
-    public string CustomerId { get; set; }
+
+    public int SupplierId { get; set; }
     public string CompanyName { get; set; }
     public string ContactName { get; set; }
     public string ContactTitle { get; set; }
@@ -17,5 +17,7 @@ public class Customer
     public string Country { get; set; }
     public string Phone { get; set; }
     public string Fax { get; set; }
-    public ICollection<Order> Orders { get; set; }
+    public string HomePage { get; set; }
+
+    public ICollection<Product> Products { get; set; }
 }
